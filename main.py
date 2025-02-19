@@ -82,12 +82,12 @@ async def on_reaction_add(reaction, user):
     poll_data = polls[message.id]
 
     if reaction.emoji == '✅' and user.name not in poll_data["down"]:
-        if len(poll_data["down"]) < 2:  # Limit to 1 player for debugging
+        if len(poll_data["down"]) < 4:  # Limit to 1 player for debugging
             poll_data["down"].append(user.name)
 
     await update_poll_message(message, poll_data)
 
-    if len(poll_data["down"]) == 2:  # Check for 1 player for debugging
+    if len(poll_data["down"]) == 4:  # Check for 1 player for debugging
         down_list = poll_data["down"] + [""] * (4 - len(poll_data["down"]))  # Fill up to 4 slots
         await create_event_channel(message.guild, poll_data["details"], poll_data["down"], down_list)
         await message.clear_reactions()  # Disable further reactions
