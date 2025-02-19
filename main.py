@@ -14,7 +14,6 @@ intents.message_content = True
 intents.guilds = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# dictionary to store poll data
 polls = {}
 poll_messages = {}
 
@@ -34,7 +33,7 @@ class CourseInputModal(discord.ui.Modal):
         await interaction.response.defer()
 
         poll_message = await interaction.channel.send(
-            f"{interaction.user.mention} starting a game, who tryna play\n"
+            f"{interaction.user.mention} wanting to start a game\n"
             f"{course_details}\n\n"
             f"1.\n"
             f"2.\n"
@@ -42,9 +41,11 @@ class CourseInputModal(discord.ui.Modal):
             f"4.\n"
         )
 
-        polls[poll_message.id] = {"down": [], "details": course_details}
+        polls[poll_message.id] = {"down": [], "details": course_details, "creator_id": interaction.user.id}
 
         await poll_message.add_reaction('✅')
+
+        await poll_message.edit(view=ClosePollView(poll_message.id))
 
         # delete the original message that contains the button
         if interaction.message.id in poll_messages:
@@ -56,6 +57,32 @@ class ModalButton(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction):
         await interaction.response.send_modal(CourseInputModal())
+
+class ClosePollButton(discord.ui.Button):
+    def __init__(self, poll_id):
+        super().__init__(label="Close Poll", style=discord.ButtonStyle.danger)
+        self.poll_id = poll_id
+
+    async def callback(self, interaction: discord.Interaction):
+        poll_data = polls.get(self.poll_id)
+        if poll_data and poll_data["creator_id"] == interaction.user.id:
+            await interaction.response.defer() 
+
+            message = await interaction.channel.fetch_message(self.poll_id)
+            await message.clear_reactions()
+            await message.edit(content=f"{message.content}\n\nPoll closed.")
+            
+            down_list = poll_data["down"] + [""] * (4 - len(poll_data["down"]))  # fill up to 4 slots
+            await create_event_channel(message.guild, poll_data["details"], poll_data["down"], down_list)
+            
+            del polls[self.poll_id]
+        else:
+            await interaction.response.send_message("You are not authorized to close this poll.", ephemeral=True)
+
+class ClosePollView(discord.ui.View):
+    def __init__(self, poll_id):
+        super().__init__()
+        self.add_item(ClosePollButton(poll_id))
 
 class ModalView(discord.ui.View):
     def __init__(self):
@@ -79,15 +106,15 @@ async def on_reaction_add(reaction, user):
     poll_data = polls[message.id]
 
     if reaction.emoji == '✅' and user.display_name not in poll_data["down"]:
-        if len(poll_data["down"]) < 4:  # Limit to 1 player for debugging
+        if len(poll_data["down"]) < 4:  # limit to 1 player for debugging
             poll_data["down"].append(user.display_name)
 
     await update_poll_message(message, poll_data)
 
-    if len(poll_data["down"]) == 4:  # Check for 1 player for debugging
-        down_list = poll_data["down"] + [""] * (4 - len(poll_data["down"]))  # Fill up to 4 slots
+    if len(poll_data["down"]) == 4:  # check for 1 player for debugging
+        down_list = poll_data["down"] + [""] * (4 - len(poll_data["down"]))  # fill up to 4 slots
         await create_event_channel(message.guild, poll_data["details"], poll_data["down"], down_list)
-        await message.clear_reactions()  # Disable further reactions
+        await message.clear_reactions()  # disable further reactions
         await message.edit(content=f"{message.content}\n\nPoll closed.")
 
 @bot.event
@@ -145,7 +172,7 @@ async def create_event_channel(guild, event_name, members, down_list):
     }
 
     for member_name in members:
-        member = discord.utils.get(guild.members, name=member_name)
+        member = discord.utils.get(guild.members, display_name=member_name)
         if member:
             overwrites[member] = discord.PermissionOverwrite(read_messages=True)
 
