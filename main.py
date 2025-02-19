@@ -27,7 +27,7 @@ async def on_ready():
 class CourseInputModal(discord.ui.Modal):
     def __init__(self):
         super().__init__(title="Enter Course & Date Info")
-        self.course_info = discord.ui.TextInput(label="Course & Date", placeholder="E.g., Lynnwood GC 3.15 4PM")
+        self.course_info = discord.ui.TextInput(label="Course & Date", placeholder="E.g., Lynnwood GC Mar 15, 4PM")
         self.add_item(self.course_info)
 
     async def on_submit(self, interaction: discord.Interaction):
@@ -67,7 +67,7 @@ class ModalView(discord.ui.View):
 
 @bot.command(name="start")
 async def createpoll(ctx):
-    message = await ctx.send("Click to make, do not use '/', Discord doesnt recognize it:", view=ModalView())
+    message = await ctx.send("Click to make, type out the date, Discord channel doesnt recognize punctuation:", view=ModalView())
     poll_messages[message.id] = message
 
 @bot.event
