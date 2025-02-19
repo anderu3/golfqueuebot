@@ -4,11 +4,9 @@ import os
 from dotenv import load_dotenv
 import asyncio
 
-# Load token from .env file
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 
-# Initialize bot
 intents = discord.Intents.default()
 intents.reactions = True
 intents.messages = True
@@ -16,7 +14,7 @@ intents.message_content = True
 intents.guilds = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# Dictionary to store poll data
+# dictionary to store poll data
 polls = {}
 poll_messages = {}
 
@@ -33,7 +31,6 @@ class CourseInputModal(discord.ui.Modal):
     async def on_submit(self, interaction: discord.Interaction):
         course_details = self.course_info.value.strip()
         
-        # Acknowledge the interaction first
         await interaction.response.defer()
 
         poll_message = await interaction.channel.send(
@@ -49,13 +46,13 @@ class CourseInputModal(discord.ui.Modal):
 
         await poll_message.add_reaction('✅')
 
-        # Delete the original message that contains the button
+        # delete the original message that contains the button
         if interaction.message.id in poll_messages:
             await poll_messages[interaction.message.id].delete()
 
 class ModalButton(discord.ui.Button):
     def __init__(self):
-        super().__init__(label="Schedule Game", style=discord.ButtonStyle.primary)  # Change the label here
+        super().__init__(label="Schedule Game", style=discord.ButtonStyle.primary)  # change the label here
 
     async def callback(self, interaction: discord.Interaction):
         await interaction.response.send_modal(CourseInputModal())
@@ -81,9 +78,9 @@ async def on_reaction_add(reaction, user):
 
     poll_data = polls[message.id]
 
-    if reaction.emoji == '✅' and user.name not in poll_data["down"]:
+    if reaction.emoji == '✅' and user.display_name not in poll_data["down"]:
         if len(poll_data["down"]) < 4:  # Limit to 1 player for debugging
-            poll_data["down"].append(user.name)
+            poll_data["down"].append(user.display_name)
 
     await update_poll_message(message, poll_data)
 
@@ -121,14 +118,14 @@ async def on_raw_reaction_remove(payload):
     if user.bot:
         return
 
-    if user.name in poll_data["down"]:
-        poll_data["down"].remove(user.name)
+    if user.display_name in poll_data["down"]:
+        poll_data["down"].remove(user.display_name)
 
     await update_poll_message(message, poll_data)
 
 async def update_poll_message(message, poll_data):
     """Update the poll message content based on the current votes."""
-    down_list = poll_data["down"] + [""] * (4 - len(poll_data["down"]))  # Fill up to 4 slots
+    down_list = poll_data["down"] + [""] * (4 - len(poll_data["down"]))  # fill up to 4 slots
 
     new_content = (
         f"{message.content.splitlines()[0]}\n"
@@ -152,10 +149,9 @@ async def create_event_channel(guild, event_name, members, down_list):
         if member:
             overwrites[member] = discord.PermissionOverwrite(read_messages=True)
 
-    # Find the "Text Channels" category
+    # find the "Text Channels" category
     category = discord.utils.get(guild.categories, name="Text Channels")
-    
-    # Ensure a text channel is created under the "Text Channels" category
+
     if category:
         channel = await category.create_text_channel(event_name, overwrites=overwrites)
     else:
@@ -163,5 +159,4 @@ async def create_event_channel(guild, event_name, members, down_list):
     
     await channel.send(f"Event: {event_name}\nPlayers: {', '.join(down_list)}")
 
-# Run the bot
 bot.run(TOKEN)
