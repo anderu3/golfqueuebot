@@ -24,8 +24,11 @@ poll_messages = {}
 async def on_ready():
     print(f'Bot is ready. Logged in as {bot.user}')
 
-class CourseInputModal(discord.ui.Modal, title="Enter Course & Date Info"):
-    course_info = discord.ui.TextInput(label="Course & Date", placeholder="E.g., Lynnwood GC 3.15 4PM")
+class CourseInputModal(discord.ui.Modal):
+    def __init__(self):
+        super().__init__(title="Enter Course & Date Info")
+        self.course_info = discord.ui.TextInput(label="Course & Date", placeholder="E.g., Lynnwood GC 3.15 4PM")
+        self.add_item(self.course_info)
 
     async def on_submit(self, interaction: discord.Interaction):
         course_details = self.course_info.value.strip()
